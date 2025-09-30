@@ -1,0 +1,100 @@
+import React, { useState, useMemo, useEffect } from "react";
+import { motion } from "framer-motion";
+
+export default function NaleshWorldWatches() {
+  const [query, setQuery] = useState("");
+  const [brandFilter, setBrandFilter] = useState("All");
+  const [sortBy, setSortBy] = useState("relevance");
+  const [visibleCount, setVisibleCount] = useState(24);
+  const [watches, setWatches] = useState([]);
+  const [cart, setCart] = useState([]);
+
+  useEffect(() => {
+    const brands = [
+      { name: "Rolex", image: "https://cdn.rolex.com/images/watches/submariner/m126610ln-0001.png" },
+      { name: "Omega", image: "https://www.omegawatches.com/media/catalog/product/cache/1/image/600x600/o/m/omega-speedmaster-moonwatch-professional-31030425001005-l.png" },
+      { name: "Casio", image: "https://www.casio.com/content/dam/casio/product/watches/g-shock/ga-2100.png" },
+      { name: "Tag Heuer", image: "https://www.tagheuer.com/content/dam/tag-heuer/products/watches/carrera/CBM2110.BA0651.png" },
+      { name: "Tissot", image: "https://www.tissotwatches.com/media/catalog/product/cache/1/image/600x600/tissot-prx-powermatic-80-t137_407_11_041_00.png" },
+      { name: "Seiko", image: "https://www.seikowatches.com/media/product/seiko-snbc.png" },
+      { name: "Fossil", image: "https://www.fossil.com/media/catalog/product/cache/1/image/600x600/fossil-gen-5-smartwatch.png" },
+      { name: "Citizen", image: "https://www.citizenwatch.com/media/catalog/product/cache/1/image/600x600/citizen-eco-drive.png" }
+    ];
+
+    const allWatches = brands.flatMap((brand, index) => {
+      return Array.from({ length: 10000 }, (_, i) => ({
+        _id: index * 10000 + i + 1,
+        name: `${brand.name} Model ${i + 1}`,
+        brand: brand.name,
+        pricePKR: Math.floor(Math.random() * 500000) + 10000,
+        year: 2015 + (i % 9),
+        image: brand.image,
+        discount: Math.floor(Math.random() * 20) + 5
+      }));
+    });
+
+    setWatches(allWatches);
+  }, []);
+
+  const brands = useMemo(() => ["All", ...new Set(watches.map(w => w.brand))], [watches]);
+
+  const filtered = useMemo(() => {
+    return watches.filter(w => {
+      const matchesQuery = (w.name + " " + w.brand).toLowerCase().includes(query.toLowerCase());
+      const matchesBrand = brandFilter === "All" || w.brand === brandFilter;
+      return matchesQuery && matchesBrand;
+    });
+  }, [watches, query, brandFilter]);
+
+  function addToCart(item) {
+    setCart(prev => [...prev, item]);
+  }
+
+  const cartTotal = cart.reduce((sum, i) => {
+    const finalPrice = i.discount ? i.pricePKR - Math.round(i.pricePKR * i.discount / 100) : i.pricePKR;
+    return sum + finalPrice;
+  }, 0);
+
+  function loadMore() {
+    setVisibleCount(prev => prev + 24);
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-700 to-blue-800 p-6 text-white">
+      <motion.h1 initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1 }} className="text-4xl font-extrabold text-center mb-8 neon-text">
+        Nalesh World Watches
+      </motion.h1>
+
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="w-full md:w-64 bg-gradient-to-b from-purple-800 to-pink-600 rounded-2xl shadow-xl p-6 h-fit sticky top-6">
+          <h2 className="font-bold mb-3 text-yellow-300">Brands</h2>
+          <ul className="space-y-2">
+            {brands.map(b => (
+              <li key={b}>
+                <button onClick={() => setBrandFilter(b)} className={`w-full text-left px-3 py-2 rounded-lg ${brandFilter === b ? "bg-yellow-400 text-black" : "hover:bg-yellow-500 hover:text-black"}`}>{b}</button>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 font-bold text-white">Cart Total: PKR {cartTotal.toLocaleString()}</div>
+        </div>
+
+        <div className="flex-1">
+          <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search watches..." className="border rounded-xl p-3 w-full md:w-1/2 text-black font-semibold shadow-lg mb-8" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filtered.slice(0, visibleCount).map(w => (
+              <motion.div key={w._id} whileHover={{ scale: 1.05 }} className="bg-gradient-to-br from-purple-700 via-pink-500 to-blue-500 rounded-2xl shadow-2xl p-4 relative">
+                {w.discount && <span className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">-{w.discount}%</span>}
+                <div className="mb-1 text-xs font-bold text-yellow-200 tracking-wide">{w.brand}</div>
+                <motion.img src={w.image} alt={w.name} initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="w-full h-40 object-contain mb-2 rounded-xl shadow-inner" />
+                <h3 className="font-bold text-lg tracking-tight text-white mb-1">{w.name}</h3>
+                <p className="text-red-400 font-bold">PKR {(w.discount ? w.pricePKR - Math.round(w.pricePKR * w.discount / 100) : w.pricePKR).toLocaleString()}</p>
+                <button onClick={() => addToCart(w)} className="mt-3 bg-yellow-400 text-black px-4 py-2 rounded-lg w-full font-bold hover:scale-105 transition-transform duration-300">Add to Cart</button>
+              </motion.div>
+            ))}
+          </div>
+          {visibleCount < filtered.length && <button onClick={loadMore} className="mt-6 bg-green-500 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-600 transition-colors duration-300">Load More</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
